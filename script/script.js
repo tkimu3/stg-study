@@ -30,6 +30,11 @@
      * @type {Image}
      */
     let image = null;
+    /**
+     * 実行開始時のタイムスタンプ
+     * @type {number}
+     */
+    let startTime = null;
 
     /**
      * ページのロードが完了したときに発火する loadイベント
@@ -48,6 +53,8 @@
             image = loadedImage;
             // 初期化処理を行う
             initialize();
+            // 実行開始時のタイムスタンプを取得する
+            startTime = Date.now();
             // 描画処理を行う
             render();
         });
@@ -68,8 +75,20 @@
     function render(){
         //描画前に画面全体を不透明な明るいグレーで塗りつぶす
         util.drawRect(0, 0, canvas.width, canvas.height, '#eeeeee');
-        //画像を描画する
-        ctx.drawImage(image, 100, 100);
+
+        //現在までの経過時間を取得する（ミリ秒を秒に変換するため1000で徐算）
+        let nowTime = (Date.now() - startTime)/1000;
+        //時間の経過が見た目に分かりやすいように自機をsin波で動かす
+        let s = Math.sin(nowTime);
+        //sinやcosは半径1の円を基準にしているので、得られる値の範囲が
+        //-1.0〜1.0になるため、効果がわかりやすくなるように100倍にする
+        let x = s * 100.0;
+
+        //画像を描画する(canvasの中心位置を基準にsin波で左右に往復するようにする)
+        ctx.drawImage(image, CANVAS_WIDTH / 2 + x, CANVAS_HEIGHT / 2);
+
+        //恒常ループのために描画処理を再帰呼び出しする
+        requestAnimationFrame(render);
     }
 
     /**
