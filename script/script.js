@@ -35,6 +35,16 @@
      * @type {number}
      */
     let startTime = null;
+    /**
+     * viper の X座標
+     * @type {number}
+     */
+    let viperX = CANVAS_WIDTH / 2; //ここでは仮で canvas の中心位置
+    /**
+     * viper の Y座標
+     * @type {number}
+     */
+    let viperY = CANVAS_HEIGHT / 2; // ここでは仮で canvas の中心位置
 
     /**
      * ページのロードが完了したときに発火する loadイベント
@@ -53,9 +63,11 @@
             image = loadedImage;
             // 初期化処理を行う
             initialize();
+            // イベントを設定する
+            eventSetting();
             // 実行開始時のタイムスタンプを取得する
             startTime = Date.now();
-            // 描画処理を行う
+            // 描画理を行う
             render();
         });
     }, false);
@@ -70,6 +82,30 @@
     }
 
     /**
+     * イベントを設定する
+     */
+    function eventSetting(){
+        // キーの押下時に呼び出されるイベントリスナーを設定する
+        window.addEventListener('keydown', (event) => {
+            // 入力されたキーに応じて処理内容を変化させる
+            switch(event.key){
+                case 'ArrowLeft': // 左矢印キー
+                    viperX -= 10;
+                    break;
+                case 'ArrowRight': // 右矢印キー
+                    viperX += 10;
+                    break;
+                case 'ArrowUp': // 上矢印キー
+                    viperY -= 10;
+                    break;
+                case 'ArrowDown': // 下矢印キー
+                    viperY += 10;
+                    break;
+            }
+        }, false);
+    }
+
+    /**
      * 描画処理を行う
      */
     function render(){
@@ -78,14 +114,9 @@
 
         //現在までの経過時間を取得する（ミリ秒を秒に変換するため1000で徐算）
         let nowTime = (Date.now() - startTime)/1000;
-        //時間の経過が見た目に分かりやすいように自機をsin波で動かす
-        let s = Math.sin(nowTime);
-        //sinやcosは半径1の円を基準にしているので、得られる値の範囲が
-        //-1.0〜1.0になるため、効果がわかりやすくなるように100倍にする
-        let x = s * 100.0;
 
         //画像を描画する(canvasの中心位置を基準にsin波で左右に往復するようにする)
-        ctx.drawImage(image, CANVAS_WIDTH / 2 + x, CANVAS_HEIGHT / 2);
+        ctx.drawImage(image, viperX, viperY);
 
         //恒常ループのために描画処理を再帰呼び出しする
         requestAnimationFrame(render);
