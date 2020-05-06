@@ -45,6 +45,16 @@
      * @type {number}
      */
     let viperY = CANVAS_HEIGHT / 2; // ここでは仮で canvas の中心位置
+    /**
+     * viper が登場中かどうかを表すフラグ
+     * @type {boolean}
+     */
+    let isComing = false;
+    /**
+     * 登場演出を開始した際のタイムスタンプ
+     * @type {number}
+     */
+    let comingStart = null;
 
     /**
      * ページのロードが完了したときに発火する loadイベント
@@ -79,6 +89,11 @@
         // canvasの大きさを設定
         canvas.width = CANVAS_WIDTH;
         canvas.height = CANVAS_HEIGHT;
+
+        // 登場シーンからスタートするための設定
+        isComing = true;            // 登場中フラグを立てる
+        comingStart = Date.now();   // 登場開始のタイムスタンプを取得する
+        viperY = CANVAS_HEIGHT;     // 画面外（下端の外）を初期位置にする
     }
 
     /**
@@ -87,6 +102,8 @@
     function eventSetting(){
         // キーの押下時に呼び出されるイベントリスナーを設定する
         window.addEventListener('keydown', (event) => {
+            // 登場シーンなら何もしないで終了する
+            if (isComing === true){return;}
             // 入力されたキーに応じて処理内容を変化させる
             switch(event.key){
                 case 'ArrowLeft': // 左矢印キー
@@ -109,16 +126,36 @@
      * 描画処理を行う
      */
     function render(){
-        //描画前に画面全体を不透明な明るいグレーで塗りつぶす
+        // グローバルなアルファを必ず1.0で描画処理を開始する
+        ctx.globalAlpha = 1.0;
+        // 描画前に画面全体を不透明な明るいグレーで塗りつぶす
         util.drawRect(0, 0, canvas.width, canvas.height, '#eeeeee');
 
-        //現在までの経過時間を取得する（ミリ秒を秒に変換するため1000で徐算）
+        // 現在までの経過時間を取得する（ミリ秒を秒に変換するため1000で徐算）
         let nowTime = (Date.now() - startTime)/1000;
 
-        //画像を描画する(canvasの中心位置を基準にsin波で左右に往復するようにする)
+        // 登場シーンの処理
+        if (isComing === true){
+            // 登場シーンが始まってからの経過時間
+            let justTime = Date.now();
+            let comingTime = (justTime - comingStart) / 1000;
+            // 登場中は時間が経つほど上に向かって進む
+            viperY = CANVAS_HEIGHT - comingTime * 50;
+            // 一定の位置まで移動したら登場シーンを終了する
+            if(viperY <= CANVAS_HEIGHT - 100){
+                isComing = false;               // 登場シーンフラグを下ろす
+                viperY = CANVAS_HEIGHT - 100;   //行き過ぎの可能性もあるので位置を再設定
+            }
+            // justTimeを100で割ったとき余りが50より小さくなる場合だけ半透明にする
+            if(justTime % 100 < 50){
+                ctx.globalAlpha = 0.5;
+            }
+        }
+
+        // 画像を描画する(canvasの中心位置を基準にsin波で左右に往復するようにする)
         ctx.drawImage(image, viperX, viperY);
 
-        //恒常ループのために描画処理を再帰呼び出しする
+        // 恒常ループのために描画処理を再帰呼び出しする
         requestAnimationFrame(render);
     }
 
