@@ -41,10 +41,12 @@ class Character {
      * @param {CanvasRenderingContext2D} ctx - 描画などに利用する 2D コンテキスト
      * @param {number} x - X 座標
      * @param {number} y - Y 座標
+     * @param {number} w - 幅
+     * @param {number} h - 高さ
      * @param {number} life - キャラクターのライフ（生存フラグを兼ねる）
      * @param {Image} image - キャラクターの画像
      */
-    constructor(ctx, x, y, life, image){
+    constructor(ctx, x, y, w, h, life, image){
         /**
          * @type {CanvasRenderingContext2D}
          */
@@ -53,6 +55,14 @@ class Character {
          * @type {Position}
          */
         this.position = new Position(x, y);
+        /**
+         * @type {number}
+         */
+        this.width = w;
+        /**
+         * @type {number}
+         */
+        this.height = h;
         /**
          * @type {number}
          */
@@ -67,10 +77,16 @@ class Character {
      * キャラクターを描画する
      */
     draw(){
+        // キャラクターの幅を考慮してオフセットする量
+        let offsetX = this.width / 2;
+        let offsetY = this.height / 2;
+        // キャラクターの幅やオフセットする量を加味して描画する
         this.ctx.drawImage(
             this.image,
-            this.position.x,
-            this.position.y
+            this.position.x - offsetX,
+            this.position.y - offsetY,
+            this.width,
+            this.height
         );
     }
 }
@@ -84,13 +100,15 @@ class Viper extends Character {
      * @param {CanvasRenderingContext2D} ctx - 描画などに利用する 2D コンテキスト
      * @param {number} x - X 座標
      * @param {number} y - Y 座標
+     * @param {number} w - 幅
+     * @param {number} h - 高さ
      * @param {Image} image - キャラクターの画像
      */
-    constructor(ctx, x, y, image){
+    constructor(ctx, x, y, w, h, image){
         // Character クラスを継承しているので、まずは継承元となる
         // Character クラスのコンストラクタを呼び出すことで初期化する
         // （super が継承元のコンストラクタの呼び出しに相当する）
-        super(ctx, x, y, 0, image);
+        super(ctx, x, y, w, h, 0, image);
 
         /**
          * viper が登場中かどうかを表すフラグ
@@ -102,6 +120,11 @@ class Viper extends Character {
          * @type {number}
          */
         this.comingStart = null;
+        /**
+         * 登場演出を開始する座標
+         * @type {Position}
+         */
+        this.cominsStartPosition = null;
         /**
          * 登場演出を完了とする座標
          * @type {Position}
@@ -123,7 +146,41 @@ class Viper extends Character {
         this.comingStart = Date.now();
         // 登場開始位置に自機を移動させる
         this.position.set(startX, startY);
+        // 登場開始位置を設定する
+        this.comingStartPosition = new Position(startX, startY);
         // 登場終了とする座標を設定する
         this.comingEndPosition = new Position(endX, endY);
+    }
+
+    /**
+     * キャラクターの状態を更新し描画を行う
+     */
+    update(){
+        // 現時点のタイムスタンプを記述する
+        let justTime = Date.now();
+
+        if(this.isComing === true){
+        // 登場シーンが始まってからの経過時間
+            let comingTime = (justTime - this.comingStart) / 1000;
+            // 登場中は時間が経つほど上に向かって進む
+            let y = this.comingStartPosition.y - comingTime * 50;
+            // 一定の位置まで移動したら登場シーンを終了する
+            if(y <= this.comingEndPosition.y){
+                this.isComing = false;        // 登場シーンフラグを下ろす
+                y = this.comingEndPosition.y; // 行き過ぎの可能性もあるので位置を再設定
+            }
+            // 求めた Y 座標を自機に設定する
+            this.position.set(this.position.x, y);
+            // justTime を 100 で割ったとき余りが 50 より小さくなる場合だけ半透明にする
+            if(justTime % 100 < 50){
+                this.ctx.globalAlpha = 0.5;
+            }
+        }
+
+        // 自機キャラクターを描画する
+        this.draw();
+
+        //念の為グルーバルなアルファの状態を元に戻す
+        this.ctx.globalAlpha = 1.0;
     }
 }
