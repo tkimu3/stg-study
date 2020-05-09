@@ -1,3 +1,4 @@
+
 (() => {
     /**
      * canvas の幅
@@ -36,30 +37,15 @@
      */
     let startTime = null;
     /**
-     * viper の X座標
-     * @type {number}
+     * 自機キャラクターのインスタンス
+     * @type {Viper}
      */
-    let viperX = CANVAS_WIDTH / 2; //ここでは仮で canvas の中心位置
-    /**
-     * viper の Y座標
-     * @type {number}
-     */
-    let viperY = CANVAS_HEIGHT / 2; // ここでは仮で canvas の中心位置
-    /**
-     * viper が登場中かどうかを表すフラグ
-     * @type {boolean}
-     */
-    let isComing = false;
-    /**
-     * 登場演出を開始した際のタイムスタンプ
-     * @type {number}
-     */
-    let comingStart = null;
+    let viper = null;
 
     /**
-     * ページのロードが完了したときに発火する loadイベント
+     * ページのロードが完了したときに発火する load イベント
      */
-    window.addEventListener('load', () =>{
+    window.addEventListener('load', () => {
         // ユーティリティクラスを初期化
         util = new Canvas2DUtility(document.body.querySelector('#main_canvas'));
         // ユーティリティクラスから canvas を取得
@@ -77,7 +63,7 @@
             eventSetting();
             // 実行開始時のタイムスタンプを取得する
             startTime = Date.now();
-            // 描画理を行う
+            // 描画処理を行う
             render();
         });
     }, false);
@@ -86,14 +72,19 @@
      * canvas やコンテキストを初期化する
      */
     function initialize(){
-        // canvasの大きさを設定
+        // canvas の大きさを設定
         canvas.width = CANVAS_WIDTH;
         canvas.height = CANVAS_HEIGHT;
 
-        // 登場シーンからスタートするための設定
-        isComing = true;            // 登場中フラグを立てる
-        comingStart = Date.now();   // 登場開始のタイムスタンプを取得する
-        viperY = CANVAS_HEIGHT;     // 画面外（下端の外）を初期位置にする
+        // 自機キャラクターを初期化する
+        viper = new Viper(ctx, 0, 0, image);
+        // 登場シーンからスタートするための設定を行う
+        viper.setComing(
+            CANVAS_WIDTH / 2,   // 登場演出時の開始 X 座標
+            CANVAS_HEIGHT,      // 登場演出時の開始 Y 座標
+            CANVAS_WIDTH / 2,   // 登場演出を終了とする X 座標
+            CANVAS_HEIGHT - 100 // 登場演出を終了とする Y 座標
+        );
     }
 
     /**
@@ -102,21 +93,21 @@
     function eventSetting(){
         // キーの押下時に呼び出されるイベントリスナーを設定する
         window.addEventListener('keydown', (event) => {
-            // 登場シーンなら何もしないで終了する
-            if (isComing === true){return;}
+            // 自機が登場シーン中なら何もしないで終了する
+            if(viper.isComing === true){return;}
             // 入力されたキーに応じて処理内容を変化させる
             switch(event.key){
-                case 'ArrowLeft': // 左矢印キー
-                    viperX -= 10;
+                case 'ArrowLeft': // アローキーの左
+                    viper.position.x -= 10;
                     break;
-                case 'ArrowRight': // 右矢印キー
-                    viperX += 10;
+                case 'ArrowRight': // アローキーの右
+                    viper.position.x += 10;
                     break;
-                case 'ArrowUp': // 上矢印キー
-                    viperY -= 10;
+                case 'ArrowUp':
+                    viper.position.y -= 10; // アローキーの上
                     break;
-                case 'ArrowDown': // 下矢印キー
-                    viperY += 10;
+                case 'ArrowDown':
+                    viper.position.y += 10; // アローキーの下
                     break;
             }
         }, false);
@@ -126,42 +117,43 @@
      * 描画処理を行う
      */
     function render(){
-        // グローバルなアルファを必ず1.0で描画処理を開始する
+        // グローバルなアルファを必ず 1.0 で描画処理を開始する
         ctx.globalAlpha = 1.0;
         // 描画前に画面全体を不透明な明るいグレーで塗りつぶす
         util.drawRect(0, 0, canvas.width, canvas.height, '#eeeeee');
-
-        // 現在までの経過時間を取得する（ミリ秒を秒に変換するため1000で徐算）
-        let nowTime = (Date.now() - startTime)/1000;
+        // 現在までの経過時間を取得する（ミリ秒を秒に変換するため 1000 で除算）
+        let nowTime = (Date.now() - startTime) / 1000;
 
         // 登場シーンの処理
-        if (isComing === true){
+        if(viper.isComing === true){
             // 登場シーンが始まってからの経過時間
             let justTime = Date.now();
-            let comingTime = (justTime - comingStart) / 1000;
+            let comingTime = (justTime - viper.comingStart) / 1000;
             // 登場中は時間が経つほど上に向かって進む
-            viperY = CANVAS_HEIGHT - comingTime * 50;
+            let y = CANVAS_HEIGHT - comingTime * 50;
             // 一定の位置まで移動したら登場シーンを終了する
-            if(viperY <= CANVAS_HEIGHT - 100){
-                isComing = false;               // 登場シーンフラグを下ろす
-                viperY = CANVAS_HEIGHT - 100;   //行き過ぎの可能性もあるので位置を再設定
+            if(y <= viper.comingEndPosition.y){
+                viper.isComing = false;        // 登場シーンフラグを下ろす
+                y = viper.comingEndPosition.y; // 行き過ぎの可能性もあるので位置を再設定
             }
-            // justTimeを100で割ったとき余りが50より小さくなる場合だけ半透明にする
+            // 求めた Y 座標を自機に設定する
+            viper.position.set(viper.position.x, y);
+            // justTime を 100 で割ったとき余りが 50 より小さくなる場合だけ半透明にする
             if(justTime % 100 < 50){
                 ctx.globalAlpha = 0.5;
             }
         }
 
-        // 画像を描画する(canvasの中心位置を基準にsin波で左右に往復するようにする)
-        ctx.drawImage(image, viperX, viperY);
+        // 自機キャラクターを描画する
+        viper.draw();
 
-        // 恒常ループのために描画処理を再帰呼び出しする
+        // 恒常ループのために描画処理を再帰呼出しする
         requestAnimationFrame(render);
     }
 
     /**
      * 特定の範囲におけるランダムな整数の値を生成する
-     * @param {number} range - 乱数を生成する範囲(0以上 〜 range 未満)
+     * @param {number} range - 乱数を生成する範囲（0 以上 ～ range 未満）
      */
     function generateRandomInt(range){
         let random = Math.random();

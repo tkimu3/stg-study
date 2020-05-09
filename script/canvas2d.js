@@ -1,7 +1,8 @@
+
 /**
  * Canvas2D API をラップしたユーティリティクラス
  */
-class Canvas2DUtility{
+class Canvas2DUtility {
     /**
      * @constructor
      * @param {HTMLCanvasElement} canvas - 対象となる canvas element
@@ -41,7 +42,6 @@ class Canvas2DUtility{
         }
         this.context2d.fillRect(x, y, width, height);
     }
-
     /**
      * 線分を描画する
      * @param {number} x1 - 線分の始点の X 座標
@@ -70,7 +70,7 @@ class Canvas2DUtility{
         this.context2d.stroke();
     }
 
-     /**
+    /**
      * 多角形を描画する
      * @param {Array<number>} points - 多角形の各頂点の座標
      * @param {string} [color] - 多角形を描画する際の色
