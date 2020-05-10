@@ -1,6 +1,15 @@
 
 (() => {
     /**
+     * キーの押下状態を調べるためのオブジェクト
+     * このオブジェクトはプロジェクトのどこからでも参照できるように
+     * window オブジェクトのカスタムプロパティとして設定する
+     * @global
+     * @type {object}
+     */
+    window.isKeyDown = {};
+
+    /**
      * canvas の幅
      * @type {number}
      */
@@ -93,23 +102,13 @@
     function eventSetting(){
         // キーの押下時に呼び出されるイベントリスナーを設定する
         window.addEventListener('keydown', (event) => {
-            // 自機が登場シーン中なら何もしないで終了する
-            if(viper.isComing === true){return;}
-            // 入力されたキーに応じて処理内容を変化させる
-            switch(event.key){
-                case 'ArrowLeft': // アローキーの左
-                    viper.position.x -= 10;
-                    break;
-                case 'ArrowRight': // アローキーの右
-                    viper.position.x += 10;
-                    break;
-                case 'ArrowUp':
-                    viper.position.y -= 10; // アローキーの上
-                    break;
-                case 'ArrowDown':
-                    viper.position.y += 10; // アローキーの下
-                    break;
-            }
+            //キーの押下状態を管理するオブジェクトに押下されたことを設定する
+            isKeyDown[`key_${event.key}`] = true;
+        }, false);
+
+        // キーが話された時に呼びだされるイベントリスナーを設定する
+        window.addEventListener('keyup', (event) => {
+            isKeyDown[`key_${event.key}`] = false; //キーが離されたことを設定する
         }, false);
     }
 
