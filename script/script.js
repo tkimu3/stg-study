@@ -41,10 +41,6 @@
      */
     let ctx = null;
     /**
-     * イメージのインスタンス
-     * @type {Image}
-     */
-    let image = null;
     /**
      * 実行開始時のタイムスタンプ
      * @type {number}

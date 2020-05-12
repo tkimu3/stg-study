@@ -125,6 +125,16 @@ class Viper extends Character {
          */
         this.speed = 3;
         /**
+         * ショットを撃った後のチェック用カウンタ
+         * @type {number}
+         */
+        this.shotCheckCounter = 0;
+        /**
+         * ショットを撃つことができる間隔（フレーム数）
+         * @type {number}
+         */
+        this.shotInterval = 10;
+        /**
          * viper が登場中かどうかを表すフラグ
          * @type {boolean}
          */
@@ -226,17 +236,23 @@ class Viper extends Character {
 
             // キーの押下状態を調べてショットを生成する
             if(window.isKeyDown.key_z === true){
-                // ショットの生存を確認し非生存のものがあれば生成する
-                for(let i = 0; i < this.shotArray.length; ++i){
-                    // 非生存かどうか確認する
-                    if(this.shotArray[i].life <= 0){
-                        // 自機キャラクターの座標にショットを生成する
-                        this.shotArray[i].set(this.position.x, this.position.y);
-                        // 1つ生成したらループを抜ける
-                        break;
+                if(this.shotCheckCounter >= 0){
+                    // ショットの生存を確認し非生存のものがあれば生成する
+                    for(let i = 0; i < this.shotArray.length; ++i){
+                        // 非生存かどうか確認する
+                        if(this.shotArray[i].life <= 0){
+                            // 自機キャラクターの座標にショットを生成する
+                            this.shotArray[i].set(this.position.x, this.position.y);
+                            // ショットを生成したのでインターバルを設定する
+                            this.shotCheckCounter =- this.shotInterval;
+                            // 1つ生成したらループを抜ける
+                            break;
+                        }
                     }
                 }
             }
+            // ショットチェック用カウンタをインクリメントする
+            ++this.shotCheckCounter;
         }
 
         // 自機キャラクターを描画する
