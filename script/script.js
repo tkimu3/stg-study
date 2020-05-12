@@ -19,6 +19,11 @@
      * @type {number}
      */
     const CANVAS_HEIGHT = 480;
+    /**
+     * ショットの最大個数
+     * @type {number}
+     */
+    const SHOT_MAX_COUNT = 10;
 
     /**
      * Canvas2D API をラップしたユーティリティクラス
@@ -50,6 +55,11 @@
      * @type {Viper}
      */
     let viper = null;
+    /**
+     * ショットのインスタンスを格納する配列
+     * @type {Array<Shot>}
+     */
+    let shotArray = [];
 
     /**
      * ページのロードが完了したときに発火する load イベント
@@ -62,19 +72,10 @@
         // ユーティリティクラスから 2d コンテキストを取得
         ctx = util.context;
 
-        // まず最初に画像の読み込みを開始する
-        util.imageLoader('./image/viper.png', (loadedImage) => {
-            // 引数経由で画像を受け取り変数に代入しておく
-            image = loadedImage;
-            // 初期化処理を行う
-            initialize();
-            // イベントを設定する
-            eventSetting();
-            // 実行開始時のタイムスタンプを取得する
-            startTime = Date.now();
-            // 描画処理を行う
-            render();
-        });
+        // 初期化処理を行う
+        initialize();
+        // インスタンスの状態を確認する
+        loadCheck();
     }, false);
 
     /**
@@ -86,7 +87,7 @@
         canvas.height = CANVAS_HEIGHT;
 
         // 自機キャラクターを初期化する
-        viper = new Viper(ctx, 0, 0, 64, 64, image);
+        viper = new Viper(ctx, 0, 0, 64, 64, './image/viper.png');
         // 登場シーンからスタートするための設定を行う
         viper.setComing(
             CANVAS_WIDTH / 2,   // 登場演出時の開始 X 座標
@@ -94,6 +95,41 @@
             CANVAS_WIDTH / 2,   // 登場演出を終了とする X 座標
             CANVAS_HEIGHT - 100 // 登場演出を終了とする Y 座標
         );
+
+        // ショットを初期化する
+        for(let i = 0; i< SHOT_MAX_COUNT; ++i){
+            shotArray[i] = new Shot(ctx, 0, 0, 32, 32, './image/viper_shot.png');
+        }
+
+        // ショットを自機キャラクターに設定する
+        viper.setShotArray(shotArray);
+    }
+
+    /**
+     * インスタンスの準備が完了しているか確認する
+     */
+    function loadCheck(){
+        // 準備完了を意味する真偽値
+        let ready = true;
+        // AND 演算で準備完了しているかチェックする
+        ready = ready && viper.ready;
+        // 同様にショットの準備状況も確認する
+        shotArray.map((v) => {
+            ready = ready && v.ready;
+        });
+
+        // 全ての準備が完了したら次の処理に進む
+        if (ready === true){
+            // イベントを設定する
+            eventSetting();
+            // 実行開始時のタイムスタンプを取得する
+            startTime = Date.now();
+            // 描画処理を開始する
+            render();
+        }else{
+            // 準備が完了していない場合には 0.1秒ごとに再帰呼び出しする
+            setTimeout(loadCheck, 100);
+        }
     }
 
     /**
@@ -125,6 +161,11 @@
 
         // 自機キャラクターを描画する
         viper.update();
+
+        // ショットの状態を更新する
+        shotArray.map((v) => {
+            v.update();
+        });
 
         // 恒常ループのために描画処理を再帰呼出しする
         requestAnimationFrame(render);

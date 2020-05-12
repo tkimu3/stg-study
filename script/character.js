@@ -46,7 +46,7 @@ class Character {
      * @param {number} life - キャラクターのライフ（生存フラグを兼ねる）
      * @param {Image} image - キャラクターの画像
      */
-    constructor(ctx, x, y, w, h, life, image){
+    constructor(ctx, x, y, w, h, life, imagePath){
         /**
          * @type {CanvasRenderingContext2D}
          */
@@ -68,9 +68,18 @@ class Character {
          */
         this.life = life;
         /**
+         * @type {boolean}
+         */
+        this.ready = false;
+        /**
          * @type {Image}
          */
-        this.image = image;
+        this.image = new Image();
+        this.image.addEventListener('load', () => {
+            // 画像のロードが完了したら準備完了フラグをたてる
+            this.ready = true;
+        }, false);
+        this.image.src = imagePath;
     }
 
     /**
@@ -135,6 +144,11 @@ class Viper extends Character {
          * @type {Position}
          */
         this.comingEndPosition = null;
+        /**
+         * 自身が持つショットインスタンスの配列
+         * @type {Array<Shot>}
+         */
+        this.shotArray = null;
     }
 
     /**
@@ -155,6 +169,15 @@ class Viper extends Character {
         this.comingStartPosition = new Position(startX, startY);
         // 登場終了とする座標を設定する
         this.comingEndPosition = new Position(endX, endY);
+    }
+
+    /**
+     * ショットを設定する
+     * @param {Array<Shot>} shotArray - 自身に設定するショットの配列
+     */
+    setShotArray(shotArray){
+        // 自身のプロパティに設定する
+        this.shotArray = shotArray;
     }
 
     /**
@@ -200,6 +223,20 @@ class Viper extends Character {
             let tx = Math.min(Math.max(this.position.x, 0), canvasWidth);
             let ty = Math.min(Math.max(this.position.y, 0), canvasHeight);
             this.position.set(tx, ty);
+
+            // キーの押下状態を調べてショットを生成する
+            if(window.isKeyDown.key_z === true){
+                // ショットの生存を確認し非生存のものがあれば生成する
+                for(let i = 0; i < this.shotArray.length; ++i){
+                    // 非生存かどうか確認する
+                    if(this.shotArray[i].life <= 0){
+                        // 自機キャラクターの座標にショットを生成する
+                        this.shotArray[i].set(this.position.x, this.position.y);
+                        // 1つ生成したらループを抜ける
+                        break;
+                    }
+                }
+            }
         }
 
         // 自機キャラクターを描画する
@@ -207,5 +244,59 @@ class Viper extends Character {
 
         //念の為グルーバルなアルファの状態を元に戻す
         this.ctx.globalAlpha = 1.0;
+    }
+}
+
+/**
+ * shot クラス
+ */
+class Shot extends Character{
+    /**
+      * @constructer
+      * @param {CanvasRenderingContext2D} ctx - 描画などに利用する 2D コンテキスト
+      * @param {number} x - X 座標
+      * @param {number} y - Y 座標
+      * @param {number} w - 幅
+      * @param {number} h - 高さ
+      * @param {Image} image - キャラクター用の画像のパス
+      */
+    constructor(ctx, x, y, w, h, imagePath){
+    // 継承元の初期化
+    super(ctx, x, y, w, h, 0, imagePath);
+    /**
+     * 自身の移動スピード（update 一回あたりの移動量）
+     * @type {number}
+     */
+    this.speed = 7;
+    }
+
+
+
+/**
+ * ショットを配置する
+ * @param {number} x - 配置する X 座標
+ * @param {number} y - 配置する Y 座標
+ */
+    set(x, y){
+        // 登場開始位置にショットを移動させる
+        this.position.set(x, y);
+        // ショットのライフを 0 より大きい値（生存の状態）に設定する
+        this.life = 1;
+    }
+
+    /**
+     * キャラクターの状態を更新し描画を行う
+     */
+    update(){
+        // もしショットのライフが 0 以下の場合は何もしない
+        if(this.life <= 0){return;}
+        // もしショットが画面外に移動していたらライフを 0（非生存の状態）に設定する
+        if(this.position.y + this.height < 0){
+            this.life = 0;
+        }
+        // ショットを上に向かって移動させる
+        this.position.y -= this.speed;
+        // ショットを描画する
+        this.draw();
     }
 }
