@@ -56,6 +56,14 @@ class Character {
          */
         this.position = new Position(x, y);
         /**
+         * @type {Position}
+         */
+        this.vector = new Position(0.0, -1.0);
+        /**
+         * @type {numver}
+         */
+        this.angle = 270 * Math.PI / 180;
+        /**
          * @type {number}
          */
         this.width = w;
@@ -81,6 +89,30 @@ class Character {
         }, false);
         this.image.src = imagePath;
     }
+    /**
+     * 進行方向を設定する
+     * @param {number} x - x 方向の移動量
+     * @param {number} y - y 方向の移動量
+     */
+    setVector(x, y){
+        // 自身の vector プロパティに設定する
+        this.vector.set(x, y);
+    }
+
+    /**
+     * 進行方向を角度を元に設定する
+     * @param {number} angle - 回転量（ラジアン）
+     */
+    setVectorFromAngle(angle){
+        // 自身の回転量を設定する
+        this.angle = angle;
+        // ラジアンからサインとコサインを求める
+        let sin = Math.sin(angle);
+        let cos = Math.cos(angle);
+        // 自身の vector プロパティに設定する
+        this.vector.set(cos, sin);
+    }
+
 
     /**
      * キャラクターを描画する
@@ -97,6 +129,31 @@ class Character {
             this.width,
             this.height
         );
+    }
+
+        /**
+     * 自身の回転量を元に座標系を回転させる
+     */
+    rotationDraw(){
+        // 座標系を回転する前の状態を保存する
+        this.ctx.save();
+        // 自身の位置が座標系の中心と重なるように平行移動する
+        this.ctx.translate(this.position.x, this.position.y);
+        // 座標系を回転させる（270 度の位置を基準にするため Math.PI * 1.5 を引いている）
+        this.ctx.rotate(this.angle - Math.PI * 1.5);
+
+        // キャラクターの幅を考慮してオフセットする量
+        let offsetX = this.width / 2;
+        let offsetY = this.height / 2;
+        // キャラクターの幅やオフセットする量を加味して描画する
+        this.ctx.drawImage(
+            this.image,
+            -offsetX, // 先にtranslateで平行移動しているのでオフセットのみ行う
+            -offsetY, // 先にtranslateで平行移動しているのでオフセットのみ行う
+            this.width,
+            this.height
+        );
+        this.ctx.restore(); // 座標系を回転する前の状態に戻す
     }
 }
 
@@ -161,6 +218,7 @@ class Viper extends Character {
         this.shotArray = null;
         /**
          * 自身が持つシングルショットインスタンスの配列
+         * @type {Array<Shot>}
          */
         this.singleShotArray = null;
     }
@@ -261,11 +319,14 @@ class Viper extends Character {
                     for (i = 0; i < this.singleShotArray.length; i += 2){
                         // 非生存かどうかを確認する
                         if(this.singleShotArray[i].life <= 0 && this.singleShotArray[i + 1].life <= 0){
+                            // 真上の方向（270 度）から左右に 10 度傾いたラジアン
+                            let radCW = 280 * Math.PI / 180; // 時計回りに 10 度分
+                            let radCCW = 260 * Math.PI / 180; // 反時計回りに 10 度分
                             // 自機キャラクターの座標にショットを生成する
                             this.singleShotArray[i].set(this.position.x, this.position.y);
-                            this.singleShotArray[i].setVector(0.2, -0.9); // やや右に向かう
+                            this.singleShotArray[i].setVectorFromAngle(radCW); // やや右に向かう
                             this.singleShotArray[i + 1].set(this.position.x, this.position.y);
-                            this.singleShotArray[i + 1].setVector(-0.2, -0.9); // やや左に向かう
+                            this.singleShotArray[i + 1].setVectorFromAngle(radCCW); // やや左に向かう
                             // ショットを生成したのでインターバルを設定する
                             this.shotCheckCounter = -this.shotInterval;
                             // 一組生成したらループを抜ける
@@ -307,11 +368,6 @@ class Shot extends Character{
      * @type {number}
      */
     this.speed = 7;
-    /**
-     * ショットの進行方向
-     * @type {Position}
-     */
-    this.vector = new Position(0.0, -1.0);
     }
 
 
@@ -329,17 +385,6 @@ class Shot extends Character{
     }
 
     /**
-     * ショットの進行方向を設定する
-     * @param {number} x - x方向の移動量
-     * @param {number} y - y方向の移動量
-     */
-    setVector(x, y){
-        // 自身の vector プロパティに設定する
-        this.vector.set(x, y);
-    }
-
-
-    /**
      * キャラクターの状態を更新し描画を行う
      */
     update(){
@@ -353,6 +398,6 @@ class Shot extends Character{
         this.position.x += this.vector.x * this.speed;
         this.position.y += this.vector.y * this.speed;
         // ショットを描画する
-        this.draw();
+        this.rotationDraw();
     }
 }
