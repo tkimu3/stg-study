@@ -20,6 +20,11 @@
      */
     const CANVAS_HEIGHT = 480;
     /**
+     * 敵キャラクターのインスタンス数
+     * @type {number}
+     */
+    const ENEMY_MAX_COUNT = 10;
+    /**
      * ショットの最大個数
      * @type {number}
      */
@@ -41,6 +46,10 @@
      */
     let ctx = null;
     /**
+     * シーンマネージャー
+     * @type {SceneManager}
+     */
+    let scene = null;
     /**
      * 実行開始時のタイムスタンプ
      * @type {number}
@@ -51,6 +60,10 @@
      * @type {Viper}
      */
     let viper = null;
+    /**
+     * 敵キャラクターのインスタンスを格納する配列
+     */
+    let enemyArray = [];
     /**
      * ショットのインスタンスを格納する配列
      * @type {Array<Shot>}
@@ -83,9 +96,13 @@
      * canvas やコンテキストを初期化する
      */
     function initialize(){
+        let i;
         // canvas の大きさを設定
         canvas.width = CANVAS_WIDTH;
         canvas.height = CANVAS_HEIGHT;
+
+        // シーンを初期化する
+        scene = new SceneManager();
 
         // 自機キャラクターを初期化する
         viper = new Viper(ctx, 0, 0, 64, 64, './image/viper.png');
@@ -97,8 +114,13 @@
             CANVAS_HEIGHT - 100 // 登場演出を終了とする Y 座標
         );
 
+        // 敵キャラクターを初期化する
+        for(i = 0; i< ENEMY_MAX_COUNT; ++i){
+            enemyArray[i] = new Enemy(ctx, 0, 0, 48, 48, './image/enemy_small.png');
+        }
+
         // ショットを初期化する
-        for(let i = 0; i< SHOT_MAX_COUNT; ++i){
+        for(i = 0; i< SHOT_MAX_COUNT; ++i){
             shotArray[i] = new Shot(ctx, 0, 0, 32, 32, './image/viper_shot.png');
             singleShotArray[i * 2] = new Shot(ctx, 0, 0, 32, 32, './image/viper_single_shot.png');
             singleShotArray[i * 2 + 1] = new Shot(ctx, 0, 0, 32, 32, './image/viper_single_shot.png');
@@ -116,6 +138,10 @@
         let ready = true;
         // AND 演算で準備完了しているかチェックする
         ready = ready && viper.ready;
+        // 同様に敵キャラクターの準備状況も確認する
+        enemyArray.map((v) => {
+            ready = ready && v.ready;
+        });
         // 同様にショットの準備状況も確認する
         shotArray.map((v) => {
             ready = ready && v.ready;
@@ -123,12 +149,14 @@
         // 同様にシングルショットの準備状況も確認する
         singleShotArray.map((v) => {
             ready = ready && v.ready;
-        })
+        });
 
         // 全ての準備が完了したら次の処理に進む
         if (ready === true){
             // イベントを設定する
             eventSetting();
+            // シーンを定義する
+            sceneSetting();
             // 実行開始時のタイムスタンプを取得する
             startTime = Date.now();
             // 描画処理を開始する
@@ -156,6 +184,39 @@
     }
 
     /**
+     * シーンを設定する
+     */
+    function sceneSetting(){
+        // イントロシーン
+        scene.add('intro', (time) => {
+            // 2秒経過したらシーンをinvade にする
+            if(time > 2.0){
+                scene.use('invade');
+            }
+        });
+
+        // invade　シーン
+        scene.add('invade', (time) => {
+            // シーンのフレーム数が0以外の時は即座に終了する
+            if(scene.frame !== 0){return;}
+            // ライフが 0 の状態の敵キャラクターが見つかったら配置する
+            for(let i = 0; i < ENEMY_MAX_COUNT; i++){
+                if(enemyArray[i].life <= 0){
+                    let e = enemyArray[i];
+                    // 出現場所は X が画面中央、Y が画面上端の外側に設定する
+                    e.set(CANVAS_WIDTH / 2, -e.height);
+                    // 進行方向は真下に向かうように設定する
+                    e.setVector(0.0, 1.0);
+                    break;
+                }
+            }
+
+        });
+        // 一番最初のシーンには intro を設定する
+        scene.use('intro');
+    }
+
+    /**
      * 描画処理を行う
      */
     function render(){
@@ -164,10 +225,18 @@
         // 描画前に画面全体を不透明な明るいグレーで塗りつぶす
         util.drawRect(0, 0, canvas.width, canvas.height, '#eeeeee');
         // 現在までの経過時間を取得する（ミリ秒を秒に変換するため 1000 で除算）
-        let nowTime = (Date.now() - startTime) / 1000;
+        let nowTime = (Date.now() - startTime) / 1000;   
+
+        // シーンを更新する
+        scene.update();
 
         // 自機キャラクターを描画する
         viper.update();
+
+        // 敵キャラクターの状態を更新する
+        enemyArray.map((v) => {
+            v.update();
+        })
 
         // ショットの状態を更新する
         shotArray.map((v) => {
